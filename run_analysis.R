@@ -1,4 +1,4 @@
-
+###### COURSERA: GETTING AND CLEANING DATA - COURSE PROJECT ######
 
 ## The following code combines the files in the 
 ## UCI "Human Activity Recognition Using Smartphones" data set
@@ -10,11 +10,12 @@
 ### This script assumes two things:
 ### 1) You have the Samsung data in your working directory. If you don't have it, 
 ###   download it from here: http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones
-### 2) You have the reshape2 library installed. If you are missing it, please run: install.packages("reshape2")
+### 2) You have the "reshape" and "plyr" packages installed.
 
-library(reshape2)
+### Load requisite libraries all of the raw data files from the working directory.
+library(reshape)
+library(plyr)
 
-### Load all of the raw data files from the working directory.
 directory <- getwd()
 X_train <- read.table(file.path(directory, "train/X_train.txt"), quote = "\"")
 y_train <- read.table(file.path(directory, "train/y_train.txt"), quote = "\"")
@@ -40,8 +41,13 @@ combine <- combine[, grep("activity_name|subject|std\\(\\)-|mean\\(\\)-", colnam
 ### for each activity for each subject.
 tidy <- melt(combine, id.vars = c("activity_name", "subject_id"), measure.vars = colnames(combine[3:50]))
 tidy <- cast(tidy, subject_id + variable ~ activity_name, mean)
-colnames(tidy) <- c("SUBJECT_ID", "SIGNAL_MEASUREMENT", paste(colnames(tidy[3:8]), "_MEAN", sep = ""))
 
-### Output the tidy data set in the working directory.
-write.table(tidy, file.path(directory, "tidySamsungData.txt"), sep = "\t", row.names = FALSE)
+### Split the signal measurement column variables from original "signal-measurement-axis" format into three columns
+### in order to keep only one variable in each column.
+tidy <- cbind(tidy[, 1], ldply(strsplit(as.character(tidy$variable), "\\-")), tidy[, 3:8])
+tidy$V2 <- sub("\\(\\)", "", tidy$V2)
+colnames(tidy) <- c("SUBJECT_ID", "SIGNAL", "MEASUREMENT", "AXIS", paste(colnames(tidy[5:10]), "_MEAN", sep = ""))
+
+### Write the final tidy data set to a file in the working directory.
+write.table(tidy, file.path(directory, "tidySmartphoneData.txt"), sep = "\t", row.names = FALSE)
 
